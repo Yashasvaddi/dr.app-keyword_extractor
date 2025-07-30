@@ -1,0 +1,7 @@
+fastapi
+protobuf
+pydub
+python-dotenv
+SpeechRecognition
+google-generativeai
+uvicorn
