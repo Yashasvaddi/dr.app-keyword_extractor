@@ -56,9 +56,10 @@ Ensure it is strictly valid JSON without explanation or markdown formatting.
         print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
         return {"error": "Gemini response not valid JSON", "raw": response_text}
 
-@app.get('/')
+@app.post('/')
 def test():
     print("The feature is working")
+    return "The feature is working"
 
 @app.post("/analyze-audio/")
 async def analyze_audio(file: UploadFile = File(...)):
