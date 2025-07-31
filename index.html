@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audio Keyword Extractor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>🎙️ Audio Keyword Extractor</h2>
+
+    <div class="section">
+      <label for="audioUpload">Upload audio file (.wav/.mp3):</label>
+      <input type="file" id="audioUpload" accept="audio/*" />
+    </div>
+
+    <div class="section">
+      <button id="recordBtn">⏺️ Record</button>
+      <button id="stopBtn" disabled>⏹️ Stop</button>
+    </div>
+
+    <div class="section">
+      <button id="submitBtn">📤 Submit to API</button>
+    </div>
+
+    <div class="section" id="responseBox">
+      <h4>Response:</h4>
+      <pre id="response"></pre>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
