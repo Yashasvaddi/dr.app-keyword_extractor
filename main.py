@@ -15,7 +15,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or specify your frontend domain here for better security
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,13 +42,44 @@ def transcribe_audio(wav_path):
 def analyze_with_gemini(text):
     prompt = f'''
 Translate the given doctor-patient conversation in english if it is not in english:{text}\n
-From the following translated doctor-patient conversation:\n
+From the following translated doctor-patient conversation:
 
 Extract and return ONLY a valid JSON object with the following keys:
-- "symptoms" (list of strings)
-- "symptom_duration" (string)
-- "medication" (list of strings)
-- "healing_time" (string)
+- "to_SYMPTOMS": list of symptom objects with fields: Symptoms, SymptomsNameCase, Severity, FromDate, Duration, Unit
+- "to_COMPLAINTS": list of complaint objects with fields: Complaint, Severity, FromDate, Duration, Unit
+
+Example format:
+{{
+  "to_SYMPTOMS": [
+    {{
+      "Symptoms": "cough",
+      "SymptomsNameCase": "COUGH",
+      "Severity": "HIGH",
+      "FromDate": "2025-01-15",
+      "Duration": "3",
+      "Unit": "M"
+    }},
+    {{
+      "Symptoms": "fever",
+      "SymptomsNameCase": "FEVER",
+      "Severity": "MEDIUM",
+      "FromDate": "2025-01-15"
+    }}
+  ],
+  "to_COMPLAINTS": [
+    {{
+      "Complaint": "cougH",
+      "Severity": "MEDIUM",
+      "Duration": "2",
+      "FromDate": "2025-01-08",
+      "Unit": "H"
+    }},
+    {{
+      "Complaint": "Fever And Cough",
+      "Severity": "VHIGH"
+    }}
+  ]
+}}
 
 Ensure it is strictly valid JSON without explanation or markdown formatting.
 '''
@@ -56,7 +87,6 @@ Ensure it is strictly valid JSON without explanation or markdown formatting.
     response = model.generate_content(prompt)
     response_text = response.text.strip()
 
-    # 🔍 Clean response if wrapped in markdown
     if response_text.startswith("```json"):
         response_text = re.sub(r"```json|```", "", response_text).strip()
 
@@ -82,13 +112,10 @@ async def analyze_audio(file: UploadFile = File(...)):
         transcript = transcribe_audio(converted_path)
         analysis = analyze_with_gemini(transcript)
 
-        # Unpack keys into top-level response
         result = {
             "transcript": transcript,
-            "symptoms": analysis.get("symptoms", []),
-            "symptom_duration": analysis.get("symptom_duration", ""),
-            "medication": analysis.get("medication", []),
-            "healing_time": analysis.get("healing_time", "")
+            "to_SYMPTOMS": analysis.get("to_SYMPTOMS", []),
+            "to_COMPLAINTS": analysis.get("to_COMPLAINTS", [])
         }
 
         return result
