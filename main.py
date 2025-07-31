@@ -8,7 +8,6 @@ import json
 from dotenv import load_dotenv
 import re
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 load_dotenv()
 
@@ -24,7 +23,7 @@ app.add_middleware(
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv('gemini_api_key'))
-model = genai.GenerativeModel('gemini-2.5-pro')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 def convert_audio(file_path):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_output:
@@ -41,82 +40,62 @@ def transcribe_audio(wav_path):
     return recognizer.recognize_google(audio)
 
 def analyze_with_gemini(text):
-    try:
-        text1=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed.')
-        prompt = f'''
-    From the following translated doctor-patient conversation {text1}:
+    text1=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed.')
+    prompt = f'''
+From the following translated doctor-patient conversation {text1}:
 
-    Extract and return ONLY a valid JSON object with the following keys:
-    - "to_SYMPTOMS": list of symptom objects with fields: Symptoms, SymptomsNameCase, Severity, FromDate, Duration, Unit
-    - "to_COMPLAINTS": list of complaint objects with fields: Complaint, Severity, FromDate, Duration, Unit
+Extract and return ONLY a valid JSON object with the following keys:
+- "to_SYMPTOMS": list of symptom objects with fields: Symptoms, SymptomsNameCase, Severity, FromDate, Duration, Unit
+- "to_COMPLAINTS": list of complaint objects with fields: Complaint, Severity, FromDate, Duration, Unit
 
-    Example format:
+Example format:
+{{
+  "to_SYMPTOMS": [
     {{
-    "to_SYMPTOMS": [
-        {{
-        "Symptoms": "cough",
-        "SymptomsNameCase": "COUGH",
-        "Severity": "HIGH",
-        "FromDate": "2025-01-15",
-        "Duration": "3",
-        "Unit": "M"
-        }},
-        {{
-        "Symptoms": "fever",
-        "SymptomsNameCase": "FEVER",
-        "Severity": "MEDIUM",
-        "FromDate": "2025-01-15"
-        }}
-    ],
-    "to_COMPLAINTS": [
-        {{
-        "Complaint": "cougH",
-        "Severity": "MEDIUM",
-        "Duration": "2",
-        "FromDate": "2025-01-08",
-        "Unit": "H"
-        }},
-        {{
-        "Complaint": "Fever And Cough",
-        "Severity": "VHIGH"
-        }}
-    ],
-    "to_DIAGNOSIS": [
-        {
-        "FromDate": "2025-01-29",
-        "Diagnosis": "Mild Pain",
-        "Severity": "MEDIUM",
-        "Duration": "3",
-        "Unit": "H"
-        },
-        {
-        "Diagnosis": "Fever",
-        "Severity": "LOW"
-        }
-    ]
+      "Symptoms": "cough",
+      "SymptomsNameCase": "COUGH",
+      "Severity": "HIGH",
+      "FromDate": "2025-01-15",
+      "Duration": "3",
+      "Unit": "M"
+    }},
+    {{
+      "Symptoms": "fever",
+      "SymptomsNameCase": "FEVER",
+      "Severity": "MEDIUM",
+      "FromDate": "2025-01-15"
     }}
-    Ensure it is strictly valid JSON without explanation or markdown formatting.
-    '''
+  ],
+  "to_COMPLAINTS": [
+    {{
+      "Complaint": "cougH",
+      "Severity": "MEDIUM",
+      "Duration": "2",
+      "FromDate": "2025-01-08",
+      "Unit": "H"
+    }},
+    {{
+      "Complaint": "Fever And Cough",
+      "Severity": "VHIGH"
+    }}
+  ]
+}}
 
-        response = model.generate_content(prompt)
-        response_text = response.text.strip()
+Ensure it is strictly valid JSON without explanation or markdown formatting.
+'''
 
-        if response_text.startswith("```json"):
-            response_text = re.sub(r"```json|```", "", response_text).strip()
+    response = model.generate_content(prompt)
+    response_text = response.text.strip()
 
-        try:
-            return json.loads(response_text)
-        except json.JSONDecodeError as e:
-            print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
-            return {"error": "Gemini response not valid JSON", "raw": response_text}
-    except Exception as e:
-        print("Error occurred:", e)
-        return {
-            "error": str(e),
-            "to_SYMPTOMS": [],
-            "to_COMPLAINTS": [],
-            "to_DIAGNOSIS": [],
-        }
+    if response_text.startswith("```json"):
+        response_text = re.sub(r"```json|```", "", response_text).strip()
+
+    try:
+        return json.loads(response_text)
+    except json.JSONDecodeError as e:
+        print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
+        return {"error": "Gemini response not valid JSON", "raw": response_text}
+
 @app.post('/')
 def test():
     print("The feature is working")
@@ -136,9 +115,7 @@ async def analyze_audio(file: UploadFile = File(...)):
         result = {
             "transcript": transcript,
             "to_SYMPTOMS": analysis.get("to_SYMPTOMS", []),
-            "to_COMPLAINTS": analysis.get("to_COMPLAINTS", []),
-            "to_DIAGNOSIS": analysis.get("to_DIAGNOSIS", []),
-            "healing_time": analysis.get("healing_time", "")
+            "to_COMPLAINTS": analysis.get("to_COMPLAINTS", [])
         }
 
         return result
