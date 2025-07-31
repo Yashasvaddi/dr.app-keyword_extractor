@@ -91,7 +91,7 @@ Ensure it is strictly valid JSON without explanation or markdown formatting.
         response_text = re.sub(r"```json|```", "", response_text).strip()
 
     try:
-        return json.loads(response_text)
+        return [json.loads(response_text),text1]
     except json.JSONDecodeError as e:
         print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
         return {"error": "Gemini response not valid JSON", "raw": response_text}
@@ -110,10 +110,10 @@ async def analyze_audio(file: UploadFile = File(...)):
 
         converted_path = convert_audio(input_path)
         transcript = transcribe_audio(converted_path)
-        analysis = analyze_with_gemini(transcript)
+        [analysis,text1] = analyze_with_gemini(transcript)
 
         result = {
-            "transcript": transcript,
+            "Translated_transcript": text1,
             "to_SYMPTOMS": analysis.get("to_SYMPTOMS", []),
             "to_COMPLAINTS": analysis.get("to_COMPLAINTS", [])
         }
