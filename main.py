@@ -24,7 +24,7 @@ app.add_middleware(
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv('gemini_api_key'))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-2.5-pro')
 
 def convert_audio(file_path):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_output:
@@ -42,9 +42,9 @@ def transcribe_audio(wav_path):
 
 def analyze_with_gemini(text):
     try:
-        text=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed.')
+        text1=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed.')
         prompt = f'''
-    From the following translated doctor-patient conversation {text}:
+    From the following translated doctor-patient conversation {text1}:
 
     Extract and return ONLY a valid JSON object with the following keys:
     - "to_SYMPTOMS": list of symptom objects with fields: Symptoms, SymptomsNameCase, Severity, FromDate, Duration, Unit
