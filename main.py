@@ -95,7 +95,6 @@ def analyze_with_gemini(text):
         }
     ]
     }}
-    Also mention healing time as a seperate entity.
     Ensure it is strictly valid JSON without explanation or markdown formatting.
     '''
 
@@ -111,11 +110,13 @@ def analyze_with_gemini(text):
             print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
             return {"error": "Gemini response not valid JSON", "raw": response_text}
     except Exception as e:
-        print("Error occured ",e)
-        return JSONResponse(
-            status_code=500,
-            content={"error":str(e)}
-        )
+        print("Error occurred:", e)
+        return {
+            "error": str(e),
+            "to_SYMPTOMS": [],
+            "to_COMPLAINTS": [],
+            "to_DIAGNOSIS": [],
+        }
 @app.post('/')
 def test():
     print("The feature is working")
@@ -135,7 +136,9 @@ async def analyze_audio(file: UploadFile = File(...)):
         result = {
             "transcript": transcript,
             "to_SYMPTOMS": analysis.get("to_SYMPTOMS", []),
-            "to_COMPLAINTS": analysis.get("to_COMPLAINTS", [])
+            "to_COMPLAINTS": analysis.get("to_COMPLAINTS", []),
+            "to_DIAGNOSIS": analysis.get("to_DIAGNOSIS", []),
+            "healing_time": analysis.get("healing_time", "")
         }
 
         return result
