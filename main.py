@@ -40,7 +40,7 @@ def transcribe_audio(wav_path):
     return recognizer.recognize_google(audio)
 
 def analyze_with_gemini(text):
-    text=model.generate_content(f'Translate the given doctor-patient conversation in english if it is not in english:{text} and fill in some missing words/grammar if needed.')
+    text=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed.')
     prompt = f'''
 From the following translated doctor-patient conversation {text}:
 
