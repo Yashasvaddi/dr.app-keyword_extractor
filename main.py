@@ -32,7 +32,8 @@ def transcribe_audio(wav_path):
 
 def analyze_with_gemini(text):
     prompt = f'''
-From the following doctor-patient conversation:\n{text}
+Translate the given doctor-patient conversation in english if it is not in english:{text}\n
+From the following translated doctor-patient conversation:\n
 
 Extract and return ONLY a valid JSON object with the following keys:
 - "symptoms" (list of strings)
