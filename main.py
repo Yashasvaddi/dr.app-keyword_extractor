@@ -78,9 +78,22 @@ Example format:
       "Complaint": "Fever And Cough",
       "Severity": "VHIGH"
     }}
+  ],
+  "to_DIAGNOSIS": [
+    {
+      "FromDate": "2025-01-29",
+      "Diagnosis": "Mild Pain",
+      "Severity": "MEDIUM",
+      "Duration": "3",
+      "Unit": "H"
+    },
+    {
+      "Diagnosis": "Fever",
+      "Severity": "LOW"
+    }
   ]
 }}
-
+Also mention healing time as a seperate entity.
 Ensure it is strictly valid JSON without explanation or markdown formatting.
 '''
 
