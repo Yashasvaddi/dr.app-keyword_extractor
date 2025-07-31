@@ -7,10 +7,19 @@ import os
 import json
 from dotenv import load_dotenv
 import re
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify your frontend domain here for better security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv('gemini_api_key'))
