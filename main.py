@@ -23,7 +23,7 @@ app.add_middleware(
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv('gemini_api_key'))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-2.5-pro')
 
 def convert_audio(file_path):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_output:
