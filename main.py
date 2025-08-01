@@ -42,7 +42,7 @@ def transcribe_audio(wav_path):
 def analyze_with_gemini(text):
     text1=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed.')
     prompt = f'''
-From the following translated doctor-patient conversation {text1}:
+From the following translated doctor-patient conversation {text1.text}:
 
 Extract and return ONLY a valid JSON object with the following keys:
 - "to_SYMPTOMS": list of symptom objects with fields: Symptoms, SymptomsNameCase, Severity, FromDate, Duration, Unit
