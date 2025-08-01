@@ -91,7 +91,7 @@ Ensure it is strictly valid JSON without explanation or markdown formatting.
         response_text = re.sub(r"```json|```", "", response_text).strip()
 
     try:
-        return [json.loads(response_text),text1]
+        return [json.loads(response_text),text1.text]
     except json.JSONDecodeError as e:
         print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
         return {"error": "Gemini response not valid JSON", "raw": response_text}
