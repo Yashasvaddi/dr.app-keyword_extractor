@@ -65,19 +65,6 @@ Example format:
       "Severity": "MEDIUM",
       "FromDate": "2025-01-15"
     }}
-  ],
-  "to_COMPLAINTS": [
-    {{
-      "Complaint": "cougH",
-      "Severity": "MEDIUM",
-      "Duration": "2",
-      "FromDate": "2025-01-08",
-      "Unit": "H"
-    }},
-    {{
-      "Complaint": "Fever And Cough",
-      "Severity": "VHIGH"
-    }}
   ]
 }}
 
