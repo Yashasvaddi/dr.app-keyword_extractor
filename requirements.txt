@@ -3,7 +3,6 @@ fastapi
 protobuf
 pydantic
 python-dotenv
-Requests
 uvicorn
 google-generativeai
 uvicorn
