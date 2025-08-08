@@ -1,13 +1,19 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-import speech_recognition as sr
-import google.generativeai as genai
-from pydub import AudioSegment
-import tempfile
-import os
-import json
-from dotenv import load_dotenv
-import re
+from pydantic import BaseModel
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+import os, json, uuid
+import google.generativeai as genai
+from dotenv import load_dotenv
+import uvicorn
+from datetime import datetime
+import pytz
+
+india=pytz.timezone('Asia/Kolkata')
+
+indiantime=datetime.now(india)
+
+datestr=f"Day: {indiantime.strftime('%d')}, Month: {indiantime.strftime('%m')}, Year: {indiantime.strftime('%y')}"
 
 load_dotenv()
 
@@ -21,100 +27,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure Gemini API
 genai.configure(api_key=os.getenv('gemini_api_key'))
 model = genai.GenerativeModel('gemini-2.5-pro')
 
-def convert_audio(file_path):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_output:
-        output_path = temp_output.name
-        sound = AudioSegment.from_file(file_path)
-        sound = sound.set_frame_rate(16000).set_channels(1).set_sample_width(2)
-        sound.export(output_path, format="wav")
-    return output_path
+# ✅ Define request model
+class Transcript(BaseModel):
+    text: str
 
-def transcribe_audio(wav_path):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(wav_path) as source:
-        audio = recognizer.record(source)
-    return recognizer.recognize_google(audio)
+@app.post("/")
+def extract_medical_data(payload: Transcript):
+    global indiantime
+    text = payload.text
 
-def analyze_with_gemini(text):
-    text1=model.generate_content(f'Translate the given doctor-patient conversation to english:{text} and fill in some missing words/grammar if needed. Summarize the content by 30% but dont miss any important details like all medications, symptoms, complaints, duration of symptom, lab tests and revisit date mentioned in the convo. Return only the summary')
-    prompt = f'''
-From the following translated doctor-patient conversation {text1.text}:
+    if text:
+        print("Code entered backend")
 
-Extract and return ONLY a valid JSON object with the following keys:
-- "to_SYMPTOMS": list of symptom objects with fields: Symptoms, SymptomsNameCase, Severity, FromDate, Duration, Unit
-- "to_COMPLAINTS": list of complaint objects with fields: Complaint, Severity, FromDate, Duration, Unit
+    prompt = f"""
+    From the following translated doctor-patient conversation: "{text}.'"
+    Extract and return only a well-structured **JSON object** containing the answers for 
+    'to_SYMPTOMS: SymptomsCode, Symptoms, SymptomsNameCase, Unit
+     to_MEDPRESCRIPTION: MedicineCode, MedicineNameCase, MedicineType, MedicineName, MedicineComposit, Dose, DoseUnit, CustomDoseFlag, Frequency, CustomFrequency, WhenTakeMedicine, CustomWhenMedicine, Period, PeriodUnit, CustomPeriodFlag, BrandName, Qty, QtyUnit, CustomQtyFlag, Remarks, Attribute
+     to_COMPLAINT: ComplaintCode, Complaint, ComplaintNameCase, Unit
+     to_DIAGNOSIS: DiagnosisCode, Diagnosis, DiagnosisNameCase, Unit
+     to_EXAMINATION: ExaminationCode, Examination, ExaminationNameCase, Unit
+     to_ALLERGY: AllergyCode, Allergy, AllergyNameCase, Unit'
+    """
 
-Example format:
-{{
-  "to_SYMPTOMS": [
-    {{
-      "Symptoms": "cough",
-      "SymptomsNameCase": "COUGH",
-      "Severity": "HIGH",
-      "FromDate": "2025-01-15",
-      "Duration": "3",
-      "Unit": "M"
-    }},
-    {{
-      "Symptoms": "fever",
-      "SymptomsNameCase": "FEVER",
-      "Severity": "MEDIUM",
-      "FromDate": "2025-01-15"
-    }}
-  ]
-}}
-
-Ensure it is strictly valid JSON without explanation or markdown formatting.
-'''
-
+    # Call Gemini model
     response = model.generate_content(prompt)
-    response_text = response.text.strip()
 
-    if response_text.startswith("```json"):
-        response_text = re.sub(r"```json|```", "", response_text).strip()
+    content=response.text.strip()
 
-    try:
-        return [json.loads(response_text),text1.text]
-    except json.JSONDecodeError as e:
-        print("❌ JSON parsing failed. Raw Gemini output:\n", response_text)
-        return {"error": "Gemini response not valid JSON", "raw": response_text}
-
-@app.post('/')
-def test():
-    print("The feature is working")
-    return "The feature is working"
-
-@app.post("/analyze-audio/")
-async def analyze_audio(file: UploadFile = File(...)):
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".input") as temp_in:
-            temp_in.write(await file.read())
-            input_path = temp_in.name
-
-        converted_path = convert_audio(input_path)
-        transcript = transcribe_audio(converted_path)
-        [analysis,text1] = analyze_with_gemini(transcript)
-
-        result = {
-            "Translated_transcript": text1,
-            "to_SYMPTOMS": analysis.get("to_SYMPTOMS", []),
-            "to_COMPLAINTS": analysis.get("to_COMPLAINTS", [])
+    # Check if response has valid content
+    if not content:
+        return {
+            "error": "Gemini did not return a valid response.",
+            "raw_candidates": str(response)
         }
 
-        return result
+    # Extract actual text from parts
+    # content = response.candidates[0].content.parts[0].text.strip()
 
-    except sr.UnknownValueError:
-        raise HTTPException(status_code=400, detail="Could not understand the audio.")
-    except sr.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Speech recognition error: {e}")
+    try:
+        # Remove markdown json wrapping
+        if content.startswith("```json"):
+            content = content.replace("```json", "").replace("```", "").strip()
+
+        parsed_json = json.loads(content)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
-    finally:
-        if os.path.exists(input_path):
-            os.remove(input_path)
-        if os.path.exists(converted_path):
-            os.remove(converted_path)
+        return {
+            "error": "Invalid JSON from Gemini",
+            "exception": str(e),
+            "raw_output": content
+        }
+
+    os.makedirs("./outputs", exist_ok=True)
+    file_id = uuid.uuid4().hex[:8]
+    file_path = f"./outputs/structured_data_{file_id}.json"
+
+    with open(file_path, "w") as f:
+        json.dump(parsed_json, f, indent=2)
+
+    return parsed_json
