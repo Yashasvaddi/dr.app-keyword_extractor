@@ -6,14 +6,6 @@ import os, json, uuid
 import google.generativeai as genai
 from dotenv import load_dotenv
 import uvicorn
-from datetime import datetime
-import pytz
-
-india=pytz.timezone('Asia/Kolkata')
-
-indiantime=datetime.now(india)
-
-datestr=f"Day: {indiantime.strftime('%d')}, Month: {indiantime.strftime('%m')}, Year: {indiantime.strftime('%y')}"
 
 load_dotenv()
 
@@ -88,4 +80,5 @@ def extract_medical_data(payload: Transcript):
     with open(file_path, "w") as f:
         json.dump(parsed_json, f, indent=2)
 
+    print(parsed_json)
     return parsed_json
