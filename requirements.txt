@@ -1,8 +1,10 @@
+av
 fastapi
 protobuf
-pydub
+pydantic
 python-dotenv
-SpeechRecognition
+Requests
+uvicorn
 google-generativeai
 uvicorn
 python-multipart
