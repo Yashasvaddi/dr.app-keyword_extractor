@@ -28,6 +28,7 @@ class Transcript(BaseModel):
 
 @app.post("/summary")
 def summary(payload: Transcript):
+    print("Code entered Summary section")
     text=payload.text
     val=model.generate_content(f"summarize the given text {text} in such a manner that it contains all the info in the conversation but also makes it understandable by any common non medical person reading it.")
     return {"summary": val.text}
@@ -37,7 +38,7 @@ def extract_medical_data(payload: Transcript):
     text = payload.text
 
     if text:
-        print("Code entered backend")
+        print("Code entered JSON generation section")
 
     prompt = f"""
     From the following translated doctor-patient conversation: "{text}.'"
