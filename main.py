@@ -30,13 +30,13 @@ class Transcript(BaseModel):
 def summary(payload: Transcript):
     print("Code entered Summary section")
     text=payload.text
-    val=model.generate_content(f"summarize the given text {text} in such a manner that it contains all the info in the conversation but also makes it understandable by any common non medical person reading it.")
+    val=model.generate_content(f"summarize the given text {text} in such a manner that it contains all the info in the conversation but also makes it understandable by any common non medical person reading it. Do not write anything apart from the summary.")
     return {"summary": val.text}
 
 @app.post("/")
 def extract_medical_data(payload: Transcript):
     text = payload.text
-
+    
     if text:
         print("Code entered JSON generation section")
 
