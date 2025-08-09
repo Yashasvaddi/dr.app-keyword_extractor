@@ -26,9 +26,14 @@ model = genai.GenerativeModel('gemini-2.5-pro')
 class Transcript(BaseModel):
     text: str
 
+@app.post("/summary")
+def summary(payload: Transcript):
+    text=payload.text
+    val=model.generate_content(f"summarize the given text {text} in such a manner that it contains all the info in the conversation but also makes it understandable by any common non medical person reading it.")
+    return {"summary": val.text}
+
 @app.post("/")
 def extract_medical_data(payload: Transcript):
-    global indiantime
     text = payload.text
 
     if text:
