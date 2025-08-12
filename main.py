@@ -6,10 +6,13 @@ import os, json, uuid
 import google.generativeai as genai
 from dotenv import load_dotenv
 import uvicorn
+from openai import OpenAI
 
 load_dotenv()
 
 app = FastAPI()
+
+sum=" "
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,8 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-genai.configure(api_key=os.getenv('gemini_api_key'))
-model = genai.GenerativeModel('gemini-2.5-pro')
+client=OpenAI(api_key=os.getenv("openai_api_key"))
+# genai.configure(api_key=os.getenv('gemini_api_key'))
+# model = genai.GenerativeModel('gemini-2.5-pro')
 
 # ✅ Define request model
 class Transcript(BaseModel):
@@ -28,63 +32,213 @@ class Transcript(BaseModel):
 
 @app.post("/summary")
 def summary(payload: Transcript):
+    global sum
     print("Code entered Summary section")
-    text=payload.text
-    val=model.generate_content(f"summarize the given text {text} in such a manner that it contains all the info in the conversation but also makes it understandable by any common non medical person reading it. Do not write anything apart from the summary.")
-    return {"summary": val.text}
+    text = payload.text
+
+    prompt = f"""
+    Summarize the given text: {text}
+    The summary must:
+    - Contain all the information from the conversation
+    - Be easily understandable by a common non-medical person
+    - Only output the summary, nothing else
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  # You can also use gpt-4o or gpt-3.5-turbo
+        messages=[
+            {"role": "system", "content": "You are a helpful medical summarization assistant."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3
+    )
+    sum=response.choices[0].message.content.strip()
+    return {"summary": response.choices[0].message.content.strip()}
 
 @app.post("/")
 def extract_medical_data(payload: Transcript):
+    global sum
     text = payload.text
-    
+
+    example='''"DoctorID": "00163c3a-06c9-1edf-88aa-376034cb9e31",
+    "HospitalID": "00163c3a-06c9-1edf-9c82-285b1805471a",
+    "ClinicID": "00163c3a-06c9-1edf-bcd4-ca406b3cd433",
+    "UserID": "00163c3a-06c9-1edf-a9f6-b7b7d7dca1ad",
+    "Symptoms": "Fever, Cough, Chest Pain",
+    "Complaints": "Mild Pain, Chest Pain",
+    "Diagnosis": "Cough, Fever",
+    "Remarks": "Drink More Water, Avoid Aerated Drinks, Drink At Least 3 Liter",
+    "Attribute1": "Remarks - allergy ",
+    "Examination": "Stomach Pain, Stomach Itch, Pain",
+    "VitalRemarks": "Vitals are Normal",
+    "DrRemarks": "Any comments by doctor",
+    "Temperature": "102",
+    "TemperatureUnit": "F",
+    "Weight": "60",
+    "WeightUnit": "Kg",
+    "Height": "165",
+    "HeightUnit": "cm",
+    "Preview": True,
+    "DrPrivateNotes": "Private Notes - ",
+    "PulseRate": "72",
+    "PulseRateUnit": "bpm",
+    "BpLow": "90",
+    "BpHigh": "110",
+    "BpUnit": "mmHg",
+    "RandomBloodSugar": "120",
+    "SugarUnit": "mgdL",
+    "SPO2": "98",
+    "SPO2Unit": "%",
+    "HeartRate": "",
+    "HeartRateUnit": "bpm",
+    "Systolic": "",
+    "SystolicUnit": "mmHg",
+    "Diastolic": "",
+    "DiastolicUnit": "mmHg",
+    "PrescriptionDate": "20250806",
+    "PrescriptionTime": "195023",
+    "FollowUpDate": "20250806",
+    "FollowUpTime": "103000",
+    "LabRemarks": "",
+    "DigitalRx": True,
+    "LanguageKey": "EN",
+    "LastUpdatedID": "00163c3a-06c9-1edf-9c82-2121709c0714",
+    "LastUpdatedName": "Radha hospital",
+    "to_LABPRESCRIPTION": [
+        {"TestName": "CT SCAN", "TestNameLower": "CT Scan", "Attribute": ""},
+        {"TestName": " CBC", "TestNameLower": " CBC", "Attribute": ""}
+    ],
+    "to_MEDPRESCRIPTION": [
+        {
+            "MedicineCode": "00000000",
+            "MedicineNameCase": "dolo",
+            "MedicineType": "T",
+            "MedicineName": "dolo",
+            "MedicineComposition": "",
+            "Dose": "1 tablet",
+            "DoseUnit": "",
+            "CustomDoseFlag": False,
+            "Frequency": "111",
+            "CustomFrequencyFlag": False,
+            "WhenTakeMedicine": "",
+            "CustomWhenMedicineFlag": False,
+            "Period": "",
+            "PeriodUnit": "",
+            "CustomPeriodFlag": False,
+            "BrandName": "",
+            "Qty": "0",
+            "QtyUnit": "",
+            "CustomQtyFlag": False,
+            "Remarks": "",
+            "Attribute": ""
+        },
+        {
+            "MedicineCode": "00000005",
+            "MedicineNameCase": "crocin",
+            "MedicineType": "T",
+            "MedicineName": "crocin",
+            "MedicineComposition": "",
+            "Dose": "1 tablet",
+            "DoseUnit": "",
+            "CustomDoseFlag": False,
+            "Frequency": "101",
+            "CustomFrequencyFlag": False,
+            "WhenTakeMedicine": "After Food",
+            "CustomWhenMedicineFlag": True,
+            "Period": "2",
+            "PeriodUnit": "D",
+            "CustomPeriodFlag": False,
+            "BrandName": "",
+            "Qty": "4",
+            "QtyUnit": "",
+            "CustomQtyFlag": False,
+            "Remarks": "",
+            "Attribute": ""
+        }
+    ],
+    "to_REFDOCTOR": [
+        {
+            "RefDrMasterID": "00163c3a-06c9-1edf-b2c8-39fb27dd0ab2",
+            "Name": "Dr. Ramesh",
+            "NameUpper": "DR. RAMESH",
+            "PhoneNo": "7829927196",
+            "WhatsAppNo": "",
+            "Email": "",
+            "SpecilizationID": "29"
+        }
+    ],
+    "to_SYMPTOMS": [
+        {"SymptomsCode": "00000000", "Symptoms": "FEVER", "SymptomsNameCase": "Fever", "Unit": "D"},
+        {"SymptomsCode": "00000000", "Symptoms": "COUGH", "SymptomsNameCase": "Cough", "Unit": "D"},
+        {"SymptomsCode": "00000000", "Symptoms": "CHEST PAIN", "SymptomsNameCase": "Chest Pain", "Unit": "D"}
+    ],
+    "to_MEDHISTORY": [
+        {"MedicalCode": "00000001", "Medical": "PEANUTS", "MedicalNameCase": "Peanuts", "Severity": "HIGH", "Duration": "2", "FromDate": "20241010", "Unit": "M"},
+        {"MedicalCode": "00000000", "Medical": "CANCER", "MedicalNameCase": "Cancer", "Unit": "D"},
+        {"MedicalCode": "00000000", "Medical": "ACCIDENT", "MedicalNameCase": "Accident", "Unit": "D"}
+    ],
+    "to_COMPLAINT": [
+        {"ComplaintCode": "00000001", "Complaint": "MILD PAIN", "ComplaintNameCase": "Mild Pain", "Unit": "D"},
+        {"ComplaintCode": "00000013", "Complaint": "CHEST PAIN", "ComplaintNameCase": "Chest Pain", "Unit": "D"}
+    ],
+    "to_DIAGNOSIS": [
+        {"DiagnosisCode": "00000000", "Diagnosis": "COUGH", "DiagnosisNameCase": "Cough", "Unit": "D"},
+        {"DiagnosisCode": "00000000", "Diagnosis": "FEVER", "DiagnosisNameCase": "Fever", "Unit": "D"}
+    ],
+    "to_EXAMINATION": [
+        {"ExaminationCode": "00000000", "Examination": "STOMACH PAIN", "ExaminationNameCase": "Stomach Pain", "Unit": "D"},
+        {"ExaminationCode": "00000000", "Examination": "STOMACH ITCH", "ExaminationNameCase": "Stomach Itch", "Unit": "D"},
+        {"ExaminationCode": "00000000", "Examination": "PAIN", "ExaminationNameCase": "Pain", "Unit": "D"}
+    ],
+    "to_ALLERGY": [
+        {"AllergyCode": "00000000", "Allergy": "POLLEN", "AllergyNameCase": "Pollen", "Unit": "D"},
+        {"AllergyCode": "00000000", "Allergy": "BERMUDA GRASS", "AllergyNameCase": "Bermuda grass", "Unit": "D"}
+    ]
+}"'''
+
+
     if text:
         print("Code entered JSON generation section")
 
     prompt = f"""
-    From the following translated doctor-patient conversation: "{text}.'"
-    Extract and return only a well-structured **JSON object** containing the answers for 
-    'to_SYMPTOMS: SymptomsCode, Symptoms, SymptomsNameCase, Unit
-     to_MEDPRESCRIPTION: MedicineCode, MedicineNameCase, MedicineType, MedicineName, MedicineComposit, Dose, DoseUnit, CustomDoseFlag, Frequency, CustomFrequency, WhenTakeMedicine, CustomWhenMedicine, Period, PeriodUnit, CustomPeriodFlag, BrandName, Qty, QtyUnit, CustomQtyFlag, Remarks, Attribute
-     to_COMPLAINT: ComplaintCode, Complaint, ComplaintNameCase, Unit
-     to_DIAGNOSIS: DiagnosisCode, Diagnosis, DiagnosisNameCase, Unit
-     to_EXAMINATION: ExaminationCode, Examination, ExaminationNameCase, Unit
-     to_ALLERGY: AllergyCode, Allergy, AllergyNameCase, Unit'
-    """
+   From the following translated doctor–patient conversation:
+{sum}
 
-    # Call Gemini model
-    response = model.generate_content(prompt)
+Extract the data in exactly this JSON schema:
+{example}
 
-    content=response.text.strip()
+Rules:
 
-    # Check if response has valid content
-    if not content:
-        return {
-            "error": "Gemini did not return a valid response.",
-            "raw_candidates": str(response)
-        }
+Output only valid JSON, no code blocks.
 
-    # Extract actual text from parts
-    # content = response.candidates[0].content.parts[0].text.strip()
+If Complaints is empty but Symptoms is present, copy the symptoms into Complaints.
+
+If a symptom is also a diagnosis, fill both fields.
+
+Normalize capitalization for medicine names, diagnoses, and symptoms.
+
+Where a dosage, frequency, period, or unit can be confidently inferred from medical norms, include it.
+
+Leave values empty only if truly not present or inferable from the conversation.
+
+All text should be in English, with transliteration and translation as needed."""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a medical data extraction assistant. Respond ONLY with valid JSON."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0
+    )
+
+    content = response.choices[0].message.content.strip()
 
     try:
-        # Remove markdown json wrapping
-        if content.startswith("```json"):
-            content = content.replace("```json", "").replace("```", "").strip()
+        # Parse string to JSON
+        parsed_content = json.loads(content)
+    except json.JSONDecodeError:
+        # Fallback in case the model sends something slightly malformed
+        return {"error": "Model did not return valid JSON", "raw_output": content}
 
-        parsed_json = json.loads(content)
-    except Exception as e:
-        return {
-            "error": "Invalid JSON from Gemini",
-            "exception": str(e),
-            "raw_output": content
-        }
-
-    os.makedirs("./outputs", exist_ok=True)
-    file_id = uuid.uuid4().hex[:8]
-    file_path = f"./outputs/structured_data_{file_id}.json"
-
-    with open(file_path, "w") as f:
-        json.dump(parsed_json, f, indent=2)
-
-    print(parsed_json)
-    return parsed_json
+    return parsed_content
